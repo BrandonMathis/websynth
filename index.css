@@ -2,6 +2,12 @@
   margin-bottom: 1em;
 }
 
-.visualizer {
+.visualizers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+}
+
+.visualizers canvas {
   background-color: blue;
 }

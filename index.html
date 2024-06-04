@@ -8,10 +8,14 @@
 <body>
   <h2>Levels</h2>
   <div class="buttons">
-    <button id='startVisuals'>Start</button>
+    <button class='start-visuals' data-input="mic">Mic</button>
+    <button class='start-visuals' data-input="sine">Sine</button>
+    <button class='start-visuals' data-input="square">Square</button>
   </div>
 
-  <div>
-    <canvas id="audioVisualizer" width="800" height="100" class="visualizer"></canvas>
+  <div class="visualizers">
+    <canvas id="gain-visualizer" width="800" height="100" class="visualizer"></canvas>
+
+    <canvas id="frequency-visualizer" width="800" height="100" class="visualizer"></canvas>
   </div>
 </body>
