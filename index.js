@@ -1,3 +1,5 @@
+let oscillator =  null;
+
 function drawGainPeaks(
   analyser,
   canvas,
@@ -119,23 +121,37 @@ function drawOscilloscope(analyser, canvas) {
 document.addEventListener('DOMContentLoaded', () => {
   const controls = document.querySelectorAll('.start-visuals');
 
+
   controls.forEach((item) => {
     item.addEventListener('click', (e) => {
-      window.audioContext = new AudioContext();
+      if (!window.audioContext) {
+        window.audioContext = new AudioContext();
+        setKeyboardControls();
+      }
+
+      if (!oscillator && ['sine', 'square', 'saw', 'tri'].includes(e.target.dataset.input)) {
+        initializeOscillator();
+      }
 
       switch(e.target.dataset.input) {
         case 'mic':
           analyseMicronphone();
           break;
         case 'sine':
-          analyzeSineWave();
+          setOscType('sine');
+          break;
+        case 'square':
+          setOscType('square');
+          break;
+        case 'saw':
+          setOscType('sawtooth');
+          break;
+        case 'tri':
+          setOscType('triangle');
           break;
         default:
           throw 'Invalid input source';
       }
-      controls.forEach((control) => {
-        control.disabled = true;
-      });
     });
   });
 });
@@ -160,22 +176,29 @@ function analyseMicronphone() {
     });
 }
 
-function analyzeSineWave() {
-  let freq = 380;
-  const osc = new OscillatorNode(window.audioContext, {
-    frequency: 380,
-  });
+function initializeOscillator() {
+  let freq = 370;
+  oscillator = new OscillatorNode(window.audioContext);
+  oscillator.start();
+  oscillator.connect(window.audioContext.destination);
+  oscillator.frequency.setValueAtTime(freq, window.audioContext.currentTime)
+  startVisualizer(oscillator);
+  return oscillator;
+}
+
+function setOscType(type = 'sine') {
+  oscillator.type = type;
+}
+
+function setKeyboardControls() {
   window.addEventListener('keydown', (e) => {
+    const freq = oscillator.frequency.value;
+
     if (e.key === 'ArrowUp') {
-      freq += 10;
-      osc.frequency.setValueAtTime(freq, window.audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(freq + 10, window.audioContext.currentTime);
     }
     if (e.key === 'ArrowDown') {
-      freq -= 10;
-      osc.frequency.setValueAtTime(freq, window.audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(freq - 10, window.audioContext.currentTime);
     }
   });
-  osc.connect(window.audioContext.destination);
-  osc.start();
-  startVisualizer(osc);
 }
