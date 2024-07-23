@@ -11,3 +11,26 @@
 .visualizers canvas {
   background-color: blue;
 }
+
+.synth-controls {
+  display: flex;
+  gap: 0.5em;
+  margin-bottom: 1em;
+}
+
+.synth-controls button {
+  display: block;
+}
+
+button.active {
+  background-color: black;
+  color: white;
+}
+
+.power-button {
+  color: red;
+}
+
+.power-button.power-on {
+  color: green;
+}

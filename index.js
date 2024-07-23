@@ -1,5 +1,3 @@
-let oscillator =  null;
-
 function drawGainPeaks(
   analyser,
   canvas,
@@ -119,25 +117,27 @@ function drawOscilloscope(analyser, canvas) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const controls = document.querySelectorAll('.start-visuals');
+  const controls = document.querySelectorAll('.toggle-oscillator');
+  const powerButton = document.querySelector('.power-button');
+  let oscillator =  null;
+  let oscillatorType = null;
+  let analyser = null;
 
+  powerButton.addEventListener('click', (e) => {
+    initializeSynth();
+    setKeyboardControls();
+  });
 
   controls.forEach((item) => {
     item.addEventListener('click', (e) => {
-      if (!window.audioContext) {
-        window.audioContext = new AudioContext();
-        setKeyboardControls();
-      }
-
-      if (!oscillator && ['sine', 'square', 'saw', 'tri'].includes(e.target.dataset.input)) {
-        initializeOscillator();
-      }
+      markActiveButton(e.currentTarget);
 
       switch(e.target.dataset.input) {
         case 'mic':
-          analyseMicronphone();
+          analyseMicrophone();
           break;
         case 'sine':
+          e.currentTarget.classList.add('active');
           setOscType('sine');
           break;
         case 'square':
@@ -154,51 +154,71 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  function startVisualizer() {
+    const gainCanvas = document.getElementById('gain-visualizer');
+    const freqCanvas = document.getElementById('frequency-visualizer');
+
+    drawGainPeaks(analyser, gainCanvas);
+    drawOscilloscope(analyser, freqCanvas);
+  }
+
+  function analyseMicrophone() {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        const mediaStream = window.audioContext.createMediaStreamSource(stream);
+        mediaStream.connect(analyser);
+      });
+  }
+
+  function initializeSynth() {
+    window.audioContext = new AudioContext();
+    analyser = window.audioContext.createAnalyser();
+
+    startVisualizer();
+
+    const oscillatorButtons = document.querySelectorAll('.toggle-oscillator');
+    oscillatorButtons.forEach((item) => item.removeAttribute('disabled'));
+    document.querySelector('.power-button').classList.add('power-on');
+  }
+
+  function setOscType(type = 'sine') {
+    if (oscillator) {
+      oscillator.stop();
+      oscillator.disconnect(analyser);
+      oscillator.disconnect(window.audioContext.destination);
+    }
+
+    oscillator = new OscillatorNode(
+      window.audioContext,
+      {
+        frequency: 380,
+        type: type
+      }
+    );
+    oscillator.connect(analyser);
+    oscillator.connect(window.audioContext.destination);
+    oscillator.start();
+  }
+
+  function setKeyboardControls() {
+    window.addEventListener('keydown', (e) => {
+      const freq = oscillator.frequency.value;
+
+      if (e.key === 'ArrowUp') {
+        oscillator.frequency.setValueAtTime(freq + 10, window.audioContext.currentTime);
+      }
+      if (e.key === 'ArrowDown') {
+        oscillator.frequency.setValueAtTime(freq - 10, window.audioContext.currentTime);
+      }
+    });
+  }
+
+  function markActiveButton(e) {
+    const controls = document.querySelectorAll('.synth-controls button');
+    controls.forEach((item) => item.classList.remove('active'));
+    e.classList.add('active');
+  }
 });
 
-function startVisualizer(audioNode) {
-  const gainCanvas = document.getElementById('gain-visualizer');
-  const freqCanvas = document.getElementById('frequency-visualizer');
-
-  const analyser = window.audioContext.createAnalyser();
-
-  audioNode.connect(analyser);
-  drawGainPeaks(analyser, gainCanvas);
-  drawOscilloscope(analyser, freqCanvas);
-}
-
-function analyseMicronphone() {
-  navigator.mediaDevices
-    .getUserMedia({ audio: true })
-    .then((stream) => {
-      const mediaStream = window.audioContext.createMediaStreamSource(stream);
-      startVisualizer(mediaStream);
-    });
-}
-
-function initializeOscillator() {
-  let freq = 370;
-  oscillator = new OscillatorNode(window.audioContext);
-  oscillator.start();
-  oscillator.connect(window.audioContext.destination);
-  oscillator.frequency.setValueAtTime(freq, window.audioContext.currentTime)
-  startVisualizer(oscillator);
-  return oscillator;
-}
-
-function setOscType(type = 'sine') {
-  oscillator.type = type;
-}
-
-function setKeyboardControls() {
-  window.addEventListener('keydown', (e) => {
-    const freq = oscillator.frequency.value;
-
-    if (e.key === 'ArrowUp') {
-      oscillator.frequency.setValueAtTime(freq + 10, window.audioContext.currentTime);
-    }
-    if (e.key === 'ArrowDown') {
-      oscillator.frequency.setValueAtTime(freq - 10, window.audioContext.currentTime);
-    }
-  });
-}
