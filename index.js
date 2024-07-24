@@ -3,6 +3,7 @@ let oscillator =  null;
 let oscillatorType = null;
 let analyser = null;
 let audioContext = new AudioContext();
+let synthInitialized = false;
 
 function drawGainPeaks(
   analyser,
@@ -127,9 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const powerButton = document.querySelector('.power-button');
   let activeOscType = null;
 
+  setKeyboardControls();
+
   powerButton.addEventListener('click', (e) => {
     initializeSynth();
-    setKeyboardControls();
   });
 
   controls.forEach((item) => {
@@ -176,6 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initializeSynth() {
+    if (synthInitialized) {
+      return;
+    }
     analyser = audioContext.createAnalyser();
     oscGainNode = new GainNode(audioContext, { gain: 0 });
     oscillator = new OscillatorNode(
@@ -192,10 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const oscillatorButtons = document.querySelectorAll('.toggle-oscillator');
     oscillatorButtons.forEach((item) => item.removeAttribute('disabled'));
     document.querySelector('.power-button').classList.add('power-on');
+    document.querySelector('.power-button').disabled = true;
+    synthInitialized = true;
   }
 
   function setOscType(type = 'sine') {
-    if(activeOscType === type)  {
+    if (activeOscType === type)  {
       oscGainNode.gain.setValueAtTime(0, audioContext.currentTime);
       activeOscType = null;
     } else {
