@@ -1,3 +1,9 @@
+let oscGainNode = null;
+let oscillator =  null;
+let oscillatorType = null;
+let analyser = null;
+let audioContext = new AudioContext();
+
 function drawGainPeaks(
   analyser,
   canvas,
@@ -89,7 +95,7 @@ function drawOscilloscope(analyser, canvas) {
     }
 
     // Convert index to frequency
-    const frequency = maxIndex * window.audioContext.sampleRate / analyser.fftSize;
+    const frequency = maxIndex * audioContext.sampleRate / analyser.fftSize;
     ctx.fillText(
       `Frequency: ${frequency} Hz`,
       10,
@@ -119,9 +125,7 @@ function drawOscilloscope(analyser, canvas) {
 document.addEventListener('DOMContentLoaded', () => {
   const controls = document.querySelectorAll('.toggle-oscillator');
   const powerButton = document.querySelector('.power-button');
-  let oscillator =  null;
-  let oscillatorType = null;
-  let analyser = null;
+  let activeOscType = null;
 
   powerButton.addEventListener('click', (e) => {
     initializeSynth();
@@ -137,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
           analyseMicrophone();
           break;
         case 'sine':
-          e.currentTarget.classList.add('active');
           setOscType('sine');
           break;
         case 'square':
@@ -167,15 +170,23 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
-        const mediaStream = window.audioContext.createMediaStreamSource(stream);
+        const mediaStream = audioContext.createMediaStreamSource(stream);
         mediaStream.connect(analyser);
       });
   }
 
   function initializeSynth() {
-    window.audioContext = new AudioContext();
-    analyser = window.audioContext.createAnalyser();
-
+    analyser = audioContext.createAnalyser();
+    oscGainNode = new GainNode(audioContext, { gain: 0 });
+    oscillator = new OscillatorNode(
+      audioContext,
+      { frequency: 380 }
+    );
+    // oscillator.connect(analyser);
+    oscillator.connect(oscGainNode);
+    oscGainNode.connect(audioContext.destination);
+    oscGainNode.connect(analyser);
+    oscillator.start();
     startVisualizer();
 
     const oscillatorButtons = document.querySelectorAll('.toggle-oscillator');
@@ -184,22 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setOscType(type = 'sine') {
-    if (oscillator) {
-      oscillator.stop();
-      oscillator.disconnect(analyser);
-      oscillator.disconnect(window.audioContext.destination);
+    if(activeOscType === type)  {
+      oscGainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      activeOscType = null;
+    } else {
+      oscGainNode.gain.setValueAtTime(1, audioContext.currentTime);
+      oscillator.type = type;
+      activeOscType = type;
     }
-
-    oscillator = new OscillatorNode(
-      window.audioContext,
-      {
-        frequency: 380,
-        type: type
-      }
-    );
-    oscillator.connect(analyser);
-    oscillator.connect(window.audioContext.destination);
-    oscillator.start();
   }
 
   function setKeyboardControls() {
@@ -207,18 +210,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const freq = oscillator.frequency.value;
 
       if (e.key === 'ArrowUp') {
-        oscillator.frequency.setValueAtTime(freq + 10, window.audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(freq + 10, audioContext.currentTime);
       }
       if (e.key === 'ArrowDown') {
-        oscillator.frequency.setValueAtTime(freq - 10, window.audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(freq - 10, audioContext.currentTime);
       }
     });
   }
 
   function markActiveButton(e) {
     const controls = document.querySelectorAll('.synth-controls button');
-    controls.forEach((item) => item.classList.remove('active'));
-    e.classList.add('active');
+    e.classList.toggle('active');
+    Array.from(controls)
+      .filter((control) => control !== e)
+      .forEach((item) => item.classList.remove('active'));
   }
 });
 
