@@ -6,131 +6,12 @@ let audioContext = new AudioContext();
 let synthInitialized = false;
 let keyboardEnabled = false;
 
-function drawGainPeaks(
-  analyser,
-  canvas,
-  opts = { fillStyle: 'rgb(255, 255, 255)' }
-) {
-  const barWidth = 1;
-
-  let then = new Date().getTime();
-  const fps = 25;
-  const interval = 1000 / fps;
-
-  let ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
-
-  const WIDTH = canvas.width;
-  const HEIGHT = canvas.height;
-
-  const peaksCount = WIDTH;
-  let peaks = new Array(WIDTH);
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength)
-
-  function draw() {
-    requestAnimationFrame(draw);
-
-    // Timng vars for FPS
-    var now = new Date().getTime();
-    var delta = now - then;
-
-    if (delta > interval) {
-      then = now - (delta % interval);
-
-      analyser.getByteFrequencyData(dataArray);
-      let sum = 0
-      for (const amplitude of dataArray) {
-        sum += amplitude * amplitude
-      }
-      const currentLevel = Math.sqrt(sum / dataArray.length)
-
-      if (currentLevel > -Infinity) {
-        peaks.unshift(currentLevel);
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      peaks.forEach((peak, index) => {
-        ctx.fillStyle = opts.fillStyle;
-        const barHeight = Math.max(1, peak);
-        const x = barWidth * index;
-        const y = HEIGHT / 2 - barHeight / 2;
-
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        // No need to keep record of peaks once waveform scrolls out of view
-        if (peaks.length >= peaksCount) {
-          peaks.splice(WIDTH);
-        }
-      });
-    }
-  }
-
-  draw();
-}
-
-function drawOscilloscope(analyser, canvas) {
-  const waveform = new Float32Array(analyser.frequencyBinCount);
-  const ctx = canvas.getContext('2d');
-  ctx.width = waveform.length;
-  ctx.height = 100;
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength)
-
-  function draw() {
-    requestAnimationFrame(draw);
-    ctx.clearRect(0, 0, ctx.width, ctx.height);
-
-    // Draw Frequency in Hz upper left corner
-    analyser.getByteFrequencyData(dataArray);
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px Courier';
-    // Find the peak frequency bin
-    let maxIndex = 0;
-    let maxValue = 0;
-    for (let i = 0; i < bufferLength; i++) {
-      if (dataArray[i] > maxValue) {
-        maxValue = dataArray[i];
-        maxIndex = i;
-      }
-    }
-
-    // Convert index to frequency
-    const frequency = maxIndex * audioContext.sampleRate / analyser.fftSize;
-    ctx.fillText(
-      `Frequency: ${frequency} Hz`,
-      10,
-      20
-    );
-
-    // Draw Wave
-    analyser.getFloatTimeDomainData(waveform);
-    ctx.beginPath();
-    for(let i = 0; i < waveform.length; i++) {
-      const x = i;
-      const y = ( 0.5 + (waveform[i] / 2) ) * ctx.height;
-
-      if(i == 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  };
-  draw();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const controls = document.querySelectorAll('.toggle-oscillator');
   const powerButton = document.querySelector('.power-button');
   const keysButton = document.querySelector('.enable-keyboard');
   let activeOscType = null;
 
-  setKeyboardControls();
 
   powerButton.addEventListener('click', (e) => {
     initializeSynth();
@@ -204,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.power-button').classList.add('power-on');
     document.querySelector('.power-button').disabled = true;
     synthInitialized = true;
+
+    setupKeyboardControls();
   }
 
   function setOscType(type = 'sine') {
@@ -219,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function setKeyboardControls() {
+  function setupKeyboardControls() {
     window.addEventListener('keydown', (e) => {
       const freq = oscillator.frequency.value;
 
@@ -241,11 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fireKeySound(e) {
-    console.log(e.key);
     const freq = oscillator.frequency.value;
     // Frequency map for keys z - , all in the chord of C
     const keyMap = {
-      'z': 261.63,
+      'z': 261.63, // Pure Keys
       'x': 293.66,
       'c': 329.63,
       'v': 349.23,
@@ -253,6 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
       'n': 440.00,
       'm': 493.88,
       ',': 523.25,
+      's': 277.18, // Flats and sharps
+      'd': 311.13,
+      'g': 369.99,
+      'h': 415.30,
+      'j': 466.16,
     };
     if (keyMap[e.key]) {
       oscGainNode.gain.setValueAtTime(1, audioContext.currentTime);
