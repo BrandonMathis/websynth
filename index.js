@@ -145,9 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
       oscGainNode.gain.setValueAtTime(1, audioContext.currentTime);
       oscillator.frequency.setValueAtTime(keyMap[e.key], audioContext.currentTime);
     }
+    if(e.key === ','){
+      document.querySelector('#key-comma').classList.add('playing');
+    } else {
+      document.querySelector(`#key-${e.key}`).classList.add('playing');
+    }
   }
 
   function stopKeySound(e) {
+    document.querySelectorAll('.key').forEach((key) => key.classList.remove('playing'));
     oscGainNode.gain.setValueAtTime(0, audioContext.currentTime);
   }
 
@@ -158,13 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.currentTarget.classList.remove('active');
       oscGainNode.gain.setValueAtTime(0, audioContext.currentTime);
       keyboardEnabled = false;
-      return;
+      document.querySelector('#keyboard').classList.remove('active');
     } else {
       keyboardEnabled = !keyboardEnabled;
       oscGainNode.gain.setValueAtTime(0, audioContext.currentTime);
       e.currentTarget.classList.toggle('active');
       window.addEventListener('keydown', fireKeySound);
       window.addEventListener('keyup', stopKeySound);
+      document.querySelector('#keyboard').classList.add('active');
     }
   }
 });
