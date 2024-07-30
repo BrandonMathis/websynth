@@ -12,17 +12,6 @@ body {
   gap: 1em;
 }
 
-#keyboard {
-  transform: translateY(30%);
-  opacity: 0;
-  transition: transform 0.3s ease-in, opacity 0.3s;
-}
-
-#keyboard.active {
-  transform: translateY(0);
-  opacity: 1;
-}
-
 .visualizers svg {
   width: 800px;
 }
@@ -52,4 +41,17 @@ button.active {
 
 .power-button.power-on {
   color: green;
+}
+
+#keyboard {
+  transform: translateY(30%);
+  opacity: 0;
+  transition: transform 0.3s ease-in, opacity 0.3s;
+  display: none;
+}
+
+#keyboard.active {
+  transform: translateY(0);
+  opacity: 1;
+  display: block;
 }
